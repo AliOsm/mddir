@@ -1,0 +1,30 @@
+<% @page_title = "Search — mddir" %>
+
+<h1>Search</h1>
+
+<% if @query.empty? %>
+  <p class="empty">Enter a search query above.</p>
+<% elsif @results.empty? %>
+  <p class="empty">No matches found for "<%= h(@query) %>".</p>
+<% else %>
+  <p class="subtitle">Found <%= @results.sum { |r| r.matches.length } %> matches in <%= @results.length %> files</p>
+
+  <div class="search-results">
+    <% @results.each do |result| %>
+      <div class="search-result">
+        <div class="search-result-header">
+          <span class="search-collection">[<%= h(result.collection_name) %>]</span>
+          <a href="/<%= h(result.collection_name) %>/<%= h(result.entry['slug']) %>"><%= h(result.entry["title"]) %></a>
+        </div>
+
+        <div class="search-result-file"><%= h(result.entry["filename"]) %></div>
+
+        <div class="search-result-matches">
+          <% result.matches.each do |m| %>
+            <div class="search-match">Line <%= m.line_number %>: <%= highlight(m.snippet, @query) %></div>
+          <% end %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

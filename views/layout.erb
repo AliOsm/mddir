@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title><%= @page_title || "mddir" %></title>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="logo">mddir</a>
+
+      <form action="/search" method="get" class="search-form">
+        <input type="text" name="q" id="search-input" placeholder="Search (press /)" value="<%= h(params['q'].to_s) %>" autocomplete="query">
+
+        <% if @collection_names && !@collection_names.empty? %>
+          <select name="collection" class="search-filter">
+            <option value="">All</option>
+            <% @collection_names.each do |name| %>
+              <option value="<%= h(name) %>" <%= 'selected' if (params['collection'] || @current_collection) == name %>><%= h(name) %></option>
+            <% end %>
+          </select>
+        <% end %>
+      </form>
+    </nav>
+  </header>
+
+  <main>
+    <%= yield %>
+  </main>
+
+  <script>
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "/" && !e.ctrlKey && !e.metaKey && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)) {
+        e.preventDefault();
+        document.getElementById("search-input").focus();
+      }
+    });
+  </script>
+</body>
+</html>

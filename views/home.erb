@@ -1,0 +1,21 @@
+<% @page_title = "mddir" %>
+
+<h1>Collections</h1>
+
+<% if @collections.empty? %>
+  <p class="empty">No collections yet. Use <code>mddir add &lt;collection&gt; &lt;url&gt;</code> to get started.</p>
+<% else %>
+  <div class="collection-list">
+    <% @collections.each do |name, info| %>
+      <a href="/<%= h(name) %>" class="collection-card">
+        <span class="collection-name"><%= h(name) %></span>
+        <span class="collection-meta">
+          <span class="collection-count"><%= info["entry_count"] || 0 %> <%= (info["entry_count"] || 0) == 1 ? "entry" : "entries" %></span>
+          <% if info["last_added"] %>
+            <span class="collection-date"><%= format_date(info["last_added"]) %></span>
+          <% end %>
+        </span>
+      </a>
+    <% end %>
+  </div>
+<% end %>

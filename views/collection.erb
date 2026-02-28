@@ -1,0 +1,43 @@
+<% @page_title = @collection.name %>
+
+<div class="breadcrumb">
+  <a href="/">mddir</a> &rsaquo; <span><%= h(@collection.name) %></span>
+</div>
+
+<h1><%= h(@collection.name) %></h1>
+<p class="subtitle"><%= @entries.length %> <%= @entries.length == 1 ? "entry" : "entries" %></p>
+
+<% if @entries.empty? %>
+  <p class="empty">No entries in this collection.</p>
+<% else %>
+  <div class="entry-list">
+    <% @entries.each do |entry| %>
+      <div class="entry-card">
+        <a href="/<%= h(@collection.name) %>/<%= h(entry['slug']) %>" class="entry-title"><%= h(entry["title"]) %></a>
+        <% unless entry["description"].to_s.empty? %>
+          <p class="entry-description"><%= h(truncate(entry["description"])) %></p>
+        <% end %>
+        <div class="entry-meta">
+          <span class="entry-domain"><%= h(domain_from_url(entry["url"])) %></span>
+          <span class="entry-date"><%= format_date(entry["saved_at"]) %></span>
+
+          <% if entry["token_count"] %>
+            <span class="entry-tokens"><%= format_tokens(entry["token_count"]) %></span>
+          <% end %>
+
+          <form method="post" action="/<%= h(@collection.name) %>/<%= h(entry['slug']) %>" class="inline-form" onsubmit="return confirm('Remove this entry?')">
+            <input type="hidden" name="_method" value="DELETE">
+            <button type="submit" class="btn-delete-small">remove</button>
+          </form>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
+<div class="danger-zone">
+  <form method="post" action="/<%= h(@collection.name) %>" class="inline-form" onsubmit="return confirm('Delete collection \'<%= h(@collection.name) %>\' and all its entries?')">
+    <input type="hidden" name="_method" value="DELETE">
+    <button type="submit" class="btn-delete">Delete collection</button>
+  </form>
+</div>

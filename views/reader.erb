@@ -1,0 +1,24 @@
+<% @page_title = @entry["title"] %>
+
+<div class="breadcrumb">
+  <a href="/">mddir</a> &rsaquo; <a href="/<%= h(@collection.name) %>"><%= h(@collection.name) %></a> &rsaquo; <span><%= h(@entry["title"]) %></span>
+</div>
+
+<article class="reader">
+  <header class="reader-header">
+    <h1><%= h(@entry["title"]) %></h1>
+
+    <% unless @entry["description"].to_s.empty? %>
+      <p class="reader-description"><%= h(@entry["description"]) %></p>
+    <% end %>
+
+    <div class="reader-meta">
+      <a href="<%= h(@entry['url']) %>" target="_blank" rel="noopener"><%= h(@entry["url"]) %></a>
+      <span class="reader-date">Saved <%= format_date(@entry["saved_at"]) %></span>
+    </div>
+  </header>
+
+  <div class="reader-content">
+    <%= @html_content %>
+  </div>
+</article>
