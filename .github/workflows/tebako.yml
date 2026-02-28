@@ -1,0 +1,155 @@
+name: Build Standalone Binaries
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Linux ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    container:
+      image: ghcr.io/tamatebako/tebako-ubuntu-20.04:latest
+    timeout-minutes: 120
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+      - name: Build with Tebako
+        run: |
+          tebako press \
+            --root=$GITHUB_WORKSPACE \
+            --entry-point=mddir \
+            --output=mddir-linux-${{ matrix.arch }} \
+            --Ruby=3.3.7 \
+            --patchelf
+
+      - name: Smoke test
+        run: ./mddir-linux-${{ matrix.arch }} version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mddir-linux-${{ matrix.arch }}
+          path: mddir-linux-${{ matrix.arch }}
+
+  build-macos:
+    name: macOS arm64
+    runs-on: macos-14
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3.7"
+
+      - name: Install Homebrew dependencies
+        run: brew install bison flex binutils libffi double-conversion boost jemalloc fmt glog gnu-sed bash zlib ncurses libarchive
+
+      - name: Install Tebako
+        run: gem install tebako
+
+      - name: Install strip wrapper
+        run: |
+          # Tebako runs `strip -A -n` on all output files, which corrupts
+          # .bundle (Mach-O) native extensions by truncating __LINKEDIT.
+          # This wrapper skips stripping for .bundle files to preserve them.
+          mkdir -p "$HOME/bin"
+          cat > "$HOME/bin/strip" << 'EOF'
+          #!/bin/bash
+          for arg in "$@"; do
+            if [[ "$arg" == *.bundle ]]; then
+              echo "strip wrapper: skipping $arg"
+              exit 0
+            fi
+          done
+          /usr/bin/strip "$@"
+          EOF
+          chmod +x "$HOME/bin/strip"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Build with Tebako
+        run: |
+          # libarchive.org returns 504 from GitHub Actions runners.
+          # Background watcher patches the CMake download script to use GitHub mirror.
+          (
+            STAMP_DIR="$HOME/.tebako/deps/src/_dwarfs_wr/deps/src/_libarchive-stamp"
+            SCRIPT="$STAMP_DIR/download-_libarchive.cmake"
+            while [ ! -d "$STAMP_DIR" ]; do sleep 5; done
+            while [ ! -f "$SCRIPT" ]; do sleep 0.5; done
+            sed -i '' 's|www.libarchive.org/downloads|github.com/libarchive/libarchive/releases/download/v3.7.9|g' "$SCRIPT"
+            echo "Patched libarchive download URL to use GitHub mirror"
+          ) &
+
+          # Tebako's parallel make has a race condition on ext/extinit.o.
+          # Retry up to 3 times to work around it.
+          for attempt in 1 2 3; do
+            echo "=== Build attempt $attempt ==="
+            tebako press \
+              --root=. \
+              --entry-point=mddir \
+              --output=mddir-macos-arm64 \
+              --Ruby=3.3.7 && break
+            echo "Attempt $attempt failed, retrying..."
+          done
+
+      - name: Smoke test
+        run: ./mddir-macos-arm64 version
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mddir-macos-arm64
+          path: mddir-macos-arm64
+
+  release-upload:
+    name: Attach binaries to release
+    if: github.event_name == 'release'
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Rename binaries with version tag
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          mkdir -p release
+          for dir in artifacts/mddir-*; do
+            name=$(basename "$dir")
+            # Find the actual file (may have .exe extension)
+            file=$(find "$dir" -maxdepth 1 -type f | head -1)
+            ext=""
+            [[ "$file" == *.exe ]] && ext=".exe"
+            cp "$file" "release/${name}-${TAG}${ext}"
+            chmod +x "release/${name}-${TAG}${ext}"
+          done
+
+      - name: Upload binaries to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release upload "${{ github.event.release.tag_name }}" release/* --clobber

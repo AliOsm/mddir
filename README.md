@@ -142,6 +142,8 @@ mddir add docs https://private.example.com/page --cookies ~/cookies.txt
 - [ ] Archive mode to save raw HTML alongside markdown
 - [ ] Migration command to relocate the base directory
 - [ ] Collection pinning and sorting in the web UI
+- [ ] GitHub sync (or GitLab, etc.)
+- [ ] Move entries between collections
 
 ## Development
 

@@ -36,6 +36,11 @@ module Mddir
     desc "collection SUBCOMMAND", "Manage collections"
     subcommand "collection", CollectionCLI
 
+    desc "version", "Print version"
+    def version
+      puts "mddir #{Mddir::VERSION}"
+    end
+
     desc "add COLLECTION URL [URL...]", "Fetch web pages and save to a collection"
     method_option :cookies, type: :string, desc: "Path to a cookies file"
     def add(collection_name, *urls)
