@@ -3,10 +3,8 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'mddir',
   description: 'Your web, saved locally — a markdown knowledge base for humans and agents.',
-  base: '/mddir/',
-
   head: [
-    ['link', { rel: 'icon', href: '/mddir/mddir-logo.png' }],
+    ['link', { rel: 'icon', href: '/mddir-logo.png' }],
   ],
 
   themeConfig: {
