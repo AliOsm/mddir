@@ -20,23 +20,24 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/AliOsm/mddir"
   spec.metadata["changelog_uri"] = "https://github.com/AliOsm/mddir/blob/main/CHANGELOG.md"
+  spec.metadata["rubygems_mfa_required"] = "true"
 
-  # Specify which files should be added to the gem when it is released.
-  # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-  gemspec = File.basename(__FILE__)
-  spec.files = IO.popen(%w[git ls-files -z], chdir: __dir__, err: IO::NULL) do |ls|
-    ls.readlines("\x0", chomp: true).reject do |f|
-      (f == gemspec) ||
-        f.start_with?(*%w[bin/ Gemfile .gitignore test/ .github/ .rubocop.yml])
-    end
-  end
+  spec.files = Dir["lib/**/*", "views/**/*", "public/**/*", "exe/*", "LICENSE.txt", "README.md", "CHANGELOG.md"]
   spec.bindir = "exe"
-  spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
+  spec.executables = ["mddir"]
   spec.require_paths = ["lib"]
 
-  # Uncomment to register a new dependency of your gem
-  # spec.add_dependency "example-gem", "~> 1.0"
-
-  # For more information and examples about making a new gem, check out our
-  # guide at: https://bundler.io/guides/creating_gem.html
+  spec.add_dependency "http-cookie", "~> 1.0"
+  spec.add_dependency "httpx", "~> 1.7"
+  spec.add_dependency "kramdown", "~> 2.5", ">= 2.5.2"
+  spec.add_dependency "kramdown-parser-gfm", "~> 1.1"
+  spec.add_dependency "nokogiri", "~> 1.19", ">= 1.19.1"
+  spec.add_dependency "puma", "~> 7.2"
+  spec.add_dependency "rackup", "~> 2.3", ">= 2.3.1"
+  spec.add_dependency "reverse_markdown", "~> 3.0", ">= 3.0.2"
+  spec.add_dependency "rouge", "~> 4.7"
+  spec.add_dependency "ruby-readability", "~> 0.7.3"
+  spec.add_dependency "sinatra", "~> 4.2", ">= 4.2.1"
+  spec.add_dependency "sqlite3", "~> 2.0"
+  spec.add_dependency "thor", "~> 1.5"
 end
