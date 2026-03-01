@@ -4,6 +4,15 @@ require "test_helper"
 require "mddir/fetcher"
 
 class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
+  # Readability needs sufficient surrounding text density to keep article content,
+  # so image tests use ARTICLE_PADDING to simulate realistic pages.
+  ARTICLE_PADDING = <<~HTML
+    <p>This is a substantial paragraph of text that discusses various topics related to the article.
+    It needs to be long enough for the readability algorithm to consider this section worthy of extraction.</p>
+    <p>Here is another paragraph with additional context and detail so the content extractor treats this
+    as a real article rather than boilerplate navigation or footer text that should be stripped out.</p>
+  HTML
+
   include TestHelpers
 
   def setup
@@ -288,6 +297,172 @@ class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
 
     assert_requested :get, "https://example.com/ua-test",
                      headers: { "User-Agent" => @config.user_agent }
+  end
+
+  def test_image_inside_picture_element_preserved
+    html = <<~HTML
+      <html>
+      <head><title>Image Test</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <figure>
+            <picture>
+              <source type="image/webp" srcset="https://cdn.example.com/photo.webp">
+              <img src="https://cdn.example.com/photo.png" alt="A photo">
+            </picture>
+          </figure>
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/picture")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/picture")
+
+    assert_includes entry.markdown, "![A photo](https://cdn.example.com/photo.png)"
+  end
+
+  def test_image_inside_linked_picture_substack_style
+    html = <<~HTML
+      <html>
+      <head><title>Substack Post</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <figure>
+            <div class="captioned-image-container">
+              <a class="image-link" href="https://cdn.example.com/full.png">
+                <div class="image2-inset">
+                  <picture>
+                    <source type="image/webp" srcset="https://cdn.example.com/photo.webp">
+                    <img src="https://cdn.example.com/photo.png" alt="" sizes="100vw">
+                  </picture>
+                </div>
+              </a>
+            </div>
+          </figure>
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/substack")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/substack")
+
+    assert_includes entry.markdown, "![](https://cdn.example.com/photo.png)"
+    refute_match(/(?<!!)\[\s*\]\(/, entry.markdown, "should not produce empty link syntax")
+  end
+
+  def test_plain_img_tag_unchanged
+    html = <<~HTML
+      <html>
+      <head><title>Plain Image</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <img src="https://cdn.example.com/photo.png" alt="Plain image">
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/plain-img")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/plain-img")
+
+    assert_includes entry.markdown, "![Plain image](https://cdn.example.com/photo.png)"
+  end
+
+  def test_linked_image_with_text_preserves_link
+    html = <<~HTML
+      <html>
+      <head><title>Linked Image</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <a href="https://example.com/article">
+            <img src="https://cdn.example.com/thumb.png" alt="Thumbnail">
+            Click for more
+          </a>
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/linked-img")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/linked-img")
+
+    assert_includes entry.markdown, "https://example.com/article"
+    assert_includes entry.markdown, "Click for more"
+  end
+
+  def test_picture_without_img_removed_cleanly
+    html = <<~HTML
+      <html>
+      <head><title>Empty Picture</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <picture>
+            <source type="image/webp" srcset="https://cdn.example.com/photo.webp">
+          </picture>
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/empty-picture")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/empty-picture")
+
+    refute_includes entry.markdown, "<picture>"
+    refute_includes entry.markdown, "<source>"
+  end
+
+  def test_multiple_images_all_preserved
+    html = <<~HTML
+      <html>
+      <head><title>Gallery</title></head>
+      <body>
+        <article>
+          #{ARTICLE_PADDING}
+          <figure>
+            <picture>
+              <img src="https://cdn.example.com/one.png" alt="First">
+            </picture>
+          </figure>
+          <figure>
+            <picture>
+              <img src="https://cdn.example.com/two.png" alt="Second">
+            </picture>
+          </figure>
+          #{ARTICLE_PADDING}
+        </article>
+      </body>
+      </html>
+    HTML
+
+    stub_request(:get, "https://example.com/gallery")
+      .to_return(status: 200, body: html, headers: { "Content-Type" => "text/html" })
+
+    entry = Mddir::Fetcher.new(@config).fetch("https://example.com/gallery")
+
+    assert_includes entry.markdown, "![First](https://cdn.example.com/one.png)"
+    assert_includes entry.markdown, "![Second](https://cdn.example.com/two.png)"
   end
 
   def test_local_conversion_estimates_token_count

@@ -128,7 +128,8 @@ module Mddir
     def process_html_response(url, response)
       html = normalize_encoding(response.body.to_s, response.headers["content-type"])
       document = Nokogiri::HTML(html)
-      title, article_html = extract_readable_content(html, document)
+      simplify_image_markup(document)
+      title, article_html = extract_readable_content(document.to_html, document)
       markdown = html_to_markdown(article_html)
 
       Entry.new(
@@ -140,6 +141,20 @@ module Mddir
         token_count: (markdown.length / 4.0).ceil,
         token_estimated: true
       )
+    end
+
+    def simplify_image_markup(document)
+      document.css("picture").each do |picture|
+        img = picture.at("img")
+        img ? picture.replace(img) : picture.remove
+      end
+
+      document.css("a").each do |a|
+        img = a.at("img")
+        next unless img
+
+        a.replace(img) if a.text.strip.empty?
+      end
     end
 
     def extract_readable_content(html, document)
