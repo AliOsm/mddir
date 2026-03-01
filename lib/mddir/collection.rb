@@ -91,6 +91,7 @@ module Mddir
     def remove!
       FileUtils.rm_rf(@path)
       GlobalIndex.update!(config)
+      require_relative "search_index"
       SearchIndex.open(config) { |index| index.remove_collection!(name) }
     end
 

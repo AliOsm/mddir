@@ -5,6 +5,7 @@ require "kramdown"
 require "kramdown-parser-gfm"
 require "rouge"
 require "uri"
+require_relative "search"
 
 module Mddir
   class Server < Sinatra::Base # rubocop:disable Metrics/ClassLength

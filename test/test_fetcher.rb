@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "mddir/fetcher"
 
 class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
   include TestHelpers

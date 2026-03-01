@@ -52,6 +52,7 @@ module Mddir
       collection = Collection.new(collection_name, config)
       collection.create! unless collection.exist?
 
+      require_relative "fetcher"
       fetcher = Fetcher.new(config, cookies_path: options[:cookies])
       urls.each { |url| fetch_and_save(url, collection, fetcher) }
     end
@@ -91,6 +92,7 @@ module Mddir
       collection_name = args.length >= 2 ? args[0] : nil
       query = args.length >= 2 ? args[1..].join(" ") : args[0]
 
+      require_relative "search"
       results = Search.new(config).search(query, collection_name:)
       results.empty? ? say("No matches found") : print_search_results(results)
     end

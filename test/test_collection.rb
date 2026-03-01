@@ -2,6 +2,7 @@
 
 require "English"
 require "test_helper"
+require "mddir/search_index"
 
 class TestCollection < Minitest::Test # rubocop:disable Metrics/ClassLength
   include TestHelpers

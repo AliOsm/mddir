@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
+require "mddir/search"
 
 class TestSearch < Minitest::Test # rubocop:disable Metrics/ClassLength
   include TestHelpers
