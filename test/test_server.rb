@@ -262,6 +262,18 @@ class TestServer < Minitest::Test # rubocop:disable Metrics/ClassLength
     refute_includes last_response.body, "Django Guide"
   end
 
+  def test_search_handles_search_error
+    # Place a directory where search.db expects a file to trigger a SearchError
+    db_path = File.join(@test_dir, "search.db")
+    FileUtils.rm_f(db_path)
+    FileUtils.mkdir_p(db_path)
+
+    get "/search", q: "anything"
+
+    assert_predicate last_response, :ok?
+    assert_includes last_response.body, "Search error"
+  end
+
   def test_search_no_results
     create_test_collection("ruby", entries: [
                              { slug: "fiber-abc123", title: "Ruby Fibers", content: "Some content." }

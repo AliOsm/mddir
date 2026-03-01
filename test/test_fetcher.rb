@@ -52,7 +52,7 @@ class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
 
     assert_equal "https://example.com/fibers", entry.url
     assert_equal "local", entry.conversion
-    assert entry.token_estimated
+    assert entry.token_info.estimated
     refute_empty entry.markdown
     assert_includes entry.description, "Ruby fibers"
   end
@@ -85,8 +85,8 @@ class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
     assert_equal "cloudflare", entry.conversion
     assert_equal "Cloudflare Article", entry.title
     assert_equal "A CF article", entry.description
-    assert_equal 250, entry.token_count
-    refute entry.token_estimated
+    assert_equal 250, entry.token_info.count
+    refute entry.token_info.estimated
   end
 
   def test_fetch_markdown_without_token_header
@@ -112,8 +112,8 @@ class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
     entry = fetcher.fetch("https://cf-site.com/no-tokens")
 
     assert_equal "cloudflare", entry.conversion
-    assert entry.token_estimated
-    assert_operator entry.token_count, :>, 0
+    assert entry.token_info.estimated
+    assert_operator entry.token_info.count, :>, 0
   end
 
   def test_fetch_markdown_without_frontmatter
@@ -479,7 +479,7 @@ class TestFetcher < Minitest::Test # rubocop:disable Metrics/ClassLength
     fetcher = Mddir::Fetcher.new(@config)
     entry = fetcher.fetch("https://example.com/tokens")
 
-    assert entry.token_estimated
-    assert_operator entry.token_count, :>, 0
+    assert entry.token_info.estimated
+    assert_operator entry.token_info.count, :>, 0
   end
 end

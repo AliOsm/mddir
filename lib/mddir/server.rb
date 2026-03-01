@@ -5,7 +5,6 @@ require "kramdown"
 require "kramdown-parser-gfm"
 require "rouge"
 require "uri"
-require_relative "search"
 
 module Mddir
   class Server < Sinatra::Base # rubocop:disable Metrics/ClassLength
@@ -72,7 +71,7 @@ module Mddir
     end
 
     get "/" do
-      @global = GlobalIndex.load(config)
+      @global = GlobalIndex.load!(config)
       @collections = (@global["collections"] || {}).sort_by { |name, _| name }
 
       erb :home
@@ -89,6 +88,10 @@ module Mddir
         @results = searcher.search(@query, collection_name: @collection_filter)
       end
 
+      erb :search
+    rescue SearchError => e
+      @search_error = e.message
+      @results = []
       erb :search
     end
 
@@ -109,7 +112,7 @@ module Mddir
 
       @collection = collection
       @current_collection = collection.name
-      @entry = collection.entries.find { |entry| entry["slug"] == params[:slug] }
+      @entry = collection.find_entry_by_slug(params[:slug])
       halt 404, "Entry not found" unless @entry
 
       file_path = File.join(collection.path, @entry["filename"])
@@ -142,12 +145,12 @@ module Mddir
       collection = Collection.new(params[:collection], config)
       halt 404, "Collection not found" unless collection.exist?
 
-      entry = collection.entries.find { |e| e["slug"] == params[:slug] }
+      entry = collection.remove_entry(params[:slug])
       halt 404, "Entry not found" unless entry
 
-      collection.remove_entry(entry["slug"])
-
       redirect "/#{collection.name}"
+    rescue CorruptIndexError => e
+      halt 500, "Index error: #{e.message}"
     end
   end
 end

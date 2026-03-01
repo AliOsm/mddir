@@ -9,7 +9,7 @@ module Mddir
       File.join(config.base_dir, "index.yml")
     end
 
-    def self.load(config)
+    def self.load!(config)
       file = path(config)
       return update!(config) unless File.exist?(file)
 
@@ -17,7 +17,8 @@ module Mddir
       return update!(config) unless data.is_a?(Hash)
 
       data
-    rescue Psych::SyntaxError
+    rescue Psych::SyntaxError => e
+      warn "Warning: corrupted global index (#{e.message}), rebuilding"
       update!(config)
     end
 

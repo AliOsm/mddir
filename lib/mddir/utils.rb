@@ -18,29 +18,26 @@ module Mddir
       end
     end
 
-    def self.skip_frontmatter(lines) # rubocop:disable Metrics/MethodLength
-      result = []
-      in_frontmatter = false
+    def self.skip_frontmatter(lines)
+      start = find_frontmatter_end(lines)
 
-      lines.each_with_index do |line, index|
-        line_number = index + 1
+      lines[start..].each_with_index.filter_map do |line, i|
+        line_number = start + i + 1
+        [line_number, line.chomp]
+      end
+    end
 
-        if line_number == 1 && line.strip == "---"
-          in_frontmatter = true
-          next
-        end
+    def self.find_frontmatter_end(lines)
+      return 0 unless lines.first&.strip == "---"
 
-        if in_frontmatter && line.strip == "---"
-          in_frontmatter = false
-          next
-        end
-
-        next if in_frontmatter
-
-        result << [line_number, line.chomp]
+      lines.each_with_index do |line, i|
+        next if i.zero?
+        return i + 1 if line.strip == "---"
       end
 
-      result
+      0
     end
+
+    private_class_method :find_frontmatter_end
   end
 end

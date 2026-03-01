@@ -39,9 +39,9 @@ module Mddir
       content_type = response.headers["content-type"].to_s
 
       if content_type.include?("text/markdown")
-        process_markdown_response(url, response)
+        build_entry_from_markdown(url, response)
       else
-        process_html_response(url, response)
+        build_entry_from_html(url, response)
       end
     end
 
@@ -89,10 +89,9 @@ module Mddir
       body.encode("UTF-8", invalid: :replace, undef: :replace)
     end
 
-    def process_markdown_response(url, response)
+    def build_entry_from_markdown(url, response)
       body = normalize_encoding(response.body.to_s, response.headers["content-type"])
       frontmatter, content = parse_frontmatter(body)
-      token_count, token_estimated = resolve_token_count(content, response.headers["x-markdown-tokens"])
 
       Entry.new(
         url:,
@@ -100,8 +99,7 @@ module Mddir
         description: frontmatter["description"].to_s,
         markdown: body,
         conversion: "cloudflare",
-        token_count:,
-        token_estimated:
+        token_info: build_token_info(content, response.headers["x-markdown-tokens"])
       )
     end
 
@@ -117,15 +115,15 @@ module Mddir
       [{}, body]
     end
 
-    def resolve_token_count(content, header)
+    def build_token_info(content, header)
       if header
-        [header.to_i, false]
+        TokenInfo.new(count: header.to_i, estimated: false)
       else
-        [(content.length / 4.0).ceil, true]
+        TokenInfo.new(count: (content.length / 4.0).ceil, estimated: true)
       end
     end
 
-    def process_html_response(url, response)
+    def build_entry_from_html(url, response)
       html = normalize_encoding(response.body.to_s, response.headers["content-type"])
       document = Nokogiri::HTML(html)
       simplify_image_markup(document)
@@ -138,8 +136,7 @@ module Mddir
         description: extract_description(document),
         markdown:,
         conversion: "local",
-        token_count: (markdown.length / 4.0).ceil,
-        token_estimated: true
+        token_info: build_token_info(markdown, nil)
       )
     end
 
@@ -173,7 +170,8 @@ module Mddir
     def run_readability(html)
       readable = Readability::Document.new(html, tags: READABILITY_TAGS, attributes: READABILITY_ATTRIBUTES)
       [readable.title.to_s, readable.content]
-    rescue StandardError
+    rescue StandardError => e
+      warn "Warning: readability extraction failed (#{e.message}), falling back to full body"
       ["", nil]
     end
 
@@ -195,15 +193,17 @@ module Mddir
     end
 
     def inject_code_languages(markdown, languages) # rubocop:disable Metrics/MethodLength
-      index = 0
+      opening = true
+      block_index = 0
 
       markdown.gsub(/^```\s*$/) do |match|
-        if index.even? && (index / 2) < languages.length
-          lang = languages[index / 2]
-          index += 1
-          lang ? "```#{lang}" : match
+        if opening && block_index < languages.length
+          language = languages[block_index]
+          block_index += 1
+          opening = false
+          language ? "```#{language}" : match
         else
-          index += 1
+          opening = !opening
           match
         end
       end
@@ -223,6 +223,4 @@ module Mddir
       title.sub(/\s*[|–—-]\s*[^|–—-]+\z/, "").strip
     end
   end
-
-  class FetchError < StandardError; end
 end

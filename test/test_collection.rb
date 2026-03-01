@@ -56,7 +56,7 @@ class TestCollection < Minitest::Test # rubocop:disable Metrics/ClassLength
       "token_estimated" => true
     }
 
-    assert collection.add_entry(entry_data)
+    refute_nil collection.add_entry(entry_data)
     assert_equal(1, collection.entries.count { |entry| entry["url"] == "https://example.com/fibers" })
   end
 
@@ -74,8 +74,8 @@ class TestCollection < Minitest::Test # rubocop:disable Metrics/ClassLength
       "token_estimated" => true
     }
 
-    assert collection.add_entry(entry_data)
-    refute collection.add_entry(entry_data) # duplicate
+    refute_nil collection.add_entry(entry_data)
+    assert_nil collection.add_entry(entry_data) # duplicate
   end
 
   def test_find_entry_by_index
@@ -141,6 +141,7 @@ class TestCollection < Minitest::Test # rubocop:disable Metrics/ClassLength
     collection.remove!
 
     assert_empty searcher.search("searchable")
+    refute_predicate collection, :exist?
   end
 
   def test_all_collections
@@ -178,6 +179,54 @@ class TestCollection < Minitest::Test # rubocop:disable Metrics/ClassLength
 
     assert_equal 0, collection.entry_count
     assert_empty collection.entries
+  end
+
+  def test_corrupted_index_prevents_add_entry
+    collection = Mddir::Collection.new("broken", @config)
+    collection.create!
+    File.write(collection.index_path, "{{{{ not valid yaml !!!!")
+
+    collection.entries # trigger the corrupt read
+
+    assert_raises(Mddir::CorruptIndexError) do
+      collection.add_entry("url" => "https://example.com", "title" => "Test")
+    end
+  end
+
+  def test_corrupted_index_prevents_remove_entry
+    collection = Mddir::Collection.new("broken", @config)
+    collection.create!
+    File.write(collection.index_path, "{{{{ not valid yaml !!!!")
+
+    collection.entries # trigger the corrupt read
+
+    assert_raises(Mddir::CorruptIndexError) do
+      collection.remove_entry("some-slug")
+    end
+  end
+
+  def test_find_entry_by_slug_method
+    collection = create_test_collection("ruby", entries: [
+                                          { slug: "page-abc123", title: "Page" }
+                                        ])
+
+    entry = collection.find_entry_by_slug("page-abc123")
+
+    assert_equal "Page", entry["title"]
+
+    assert_nil collection.find_entry_by_slug("nonexistent")
+  end
+
+  def test_find_entry_prefers_slug_over_index
+    collection = create_test_collection("ruby", entries: [
+                                          { slug: "2024", title: "Year Page" },
+                                          { slug: "page-two-def456", title: "Page Two" }
+                                        ])
+
+    # "2024" should match the slug, not be treated as index 2024
+    entry = collection.find_entry("2024")
+
+    assert_equal "Year Page", entry["title"]
   end
 
   def test_find_entry_returns_nil_for_bad_index

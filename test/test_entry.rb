@@ -20,8 +20,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "A test",
       markdown: "# Hello",
       conversion: "local",
-      token_count: 50,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 50, estimated: true)
     )
 
     assert_match(/\Amy-great-article-[a-f0-9]{6}\z/, entry.slug)
@@ -35,8 +34,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "",
       markdown: "# A",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     entry2 = Mddir::Entry.new(
@@ -45,8 +43,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "",
       markdown: "# B",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     refute_equal entry1.slug, entry2.slug
@@ -59,8 +56,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "Desc",
       markdown: "# Content",
       conversion: "cloudflare",
-      token_count: 100,
-      token_estimated: false
+      token_info: Mddir::TokenInfo.new(count: 100, estimated: false)
     )
 
     idx = entry.to_index_entry
@@ -80,8 +76,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "Desc",
       markdown: "# Hello World\n\nContent here.",
       conversion: "local",
-      token_count: 50,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 50, estimated: true)
     )
 
     md = entry.to_markdown_with_frontmatter
@@ -99,8 +94,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "",
       markdown: original_md,
       conversion: "cloudflare",
-      token_count: 50,
-      token_estimated: false
+      token_info: Mddir::TokenInfo.new(count: 50, estimated: false)
     )
 
     md = entry.to_markdown_with_frontmatter
@@ -120,8 +114,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "Testing save",
       markdown: "# Saved",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     entry.save_to(collection.path)
@@ -136,8 +129,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "",
       markdown: "# Content",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     assert entry.slug.start_with?("untitled-")
@@ -150,8 +142,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: nil,
       markdown: "# Content",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     refute_nil entry.slug
@@ -169,8 +160,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "Line one\nLine two",
       markdown: "# Content",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     entry.save_to(collection.path)
@@ -203,8 +193,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "CF desc",
       markdown: cf_markdown,
       conversion: "cloudflare",
-      token_count: 100,
-      token_estimated: false
+      token_info: Mddir::TokenInfo.new(count: 100, estimated: false)
     )
 
     md = entry.to_markdown_with_frontmatter
@@ -228,8 +217,7 @@ class TestEntry < Minitest::Test # rubocop:disable Metrics/ClassLength
       description: "",
       markdown: "# Content",
       conversion: "local",
-      token_count: 10,
-      token_estimated: true
+      token_info: Mddir::TokenInfo.new(count: 10, estimated: true)
     )
 
     assert_match(/\A\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\z/, entry.saved_at)

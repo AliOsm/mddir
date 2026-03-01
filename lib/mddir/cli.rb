@@ -3,17 +3,7 @@
 require "thor"
 
 module Mddir
-  module CLIConfig
-    private
-
-    def config
-      @config ||= Config.new
-    end
-  end
-
   class CollectionCLI < Thor
-    include CLIConfig
-
     namespace "collection"
 
     desc "create NAME", "Create a new empty collection"
@@ -28,11 +18,15 @@ module Mddir
       collection.create!
       say "Created collection '#{collection.name}'"
     end
+
+    private
+
+    def config
+      @config ||= Config.new
+    end
   end
 
   class CLI < Thor # rubocop:disable Metrics/ClassLength
-    include CLIConfig
-
     desc "collection SUBCOMMAND", "Manage collections"
     subcommand "collection", CollectionCLI
 
@@ -52,7 +46,6 @@ module Mddir
       collection = Collection.new(collection_name, config)
       collection.create! unless collection.exist?
 
-      require_relative "fetcher"
       fetcher = Fetcher.new(config, cookies_path: options[:cookies])
       urls.each { |url| fetch_and_save(url, collection, fetcher) }
     end
@@ -89,12 +82,12 @@ module Mddir
         return
       end
 
-      collection_name = args.length >= 2 ? args[0] : nil
-      query = args.length >= 2 ? args[1..].join(" ") : args[0]
+      collection_name, query = parse_search_args(args)
 
-      require_relative "search"
       results = Search.new(config).search(query, collection_name:)
       results.empty? ? say("No matches found") : print_search_results(results)
+    rescue SearchError => e
+      say_error "Search error: #{e.message}"
     end
 
     desc "config", "Open configuration file in editor"
@@ -114,14 +107,11 @@ module Mddir
 
     desc "serve", "Start the web UI server"
     def serve
-      require_relative "server"
       Server.start(config)
     end
 
     desc "open", "Start the web UI server and open in browser"
     def open
-      require_relative "server"
-
       url = "http://localhost:#{config.port}"
       Thread.new do
         sleep 1
@@ -133,8 +123,20 @@ module Mddir
 
     private
 
-    def fetch_and_save(url, collection, fetcher)
-      if collection.entries.any? { |entry| entry["url"] == url }
+    def config
+      @config ||= Config.new
+    end
+
+    def parse_search_args(args)
+      if args.length >= 2
+        [args[0], args[1..].join(" ")]
+      else
+        [nil, args[0]]
+      end
+    end
+
+    def fetch_and_save(url, collection, fetcher) # rubocop:disable Metrics/MethodLength
+      if collection.url?(url)
         say "Skipped (duplicate): #{url}"
         return
       end
@@ -143,12 +145,14 @@ module Mddir
       entry.save_to(collection.path)
       collection.add_entry(entry.to_index_entry)
       say "Saved: #{entry.filename} → #{collection.name} (#{entry.conversion})"
-    rescue FetchError, StandardError => e
+    rescue FetchError => e
       say_error "Error fetching #{url}: #{e.message}"
+    rescue CorruptIndexError => e
+      say_error "Error: #{e.message}"
     end
 
     def list_collections
-      collections = GlobalIndex.load(config)["collections"] || {}
+      collections = GlobalIndex.load!(config)["collections"] || {}
 
       if collections.empty?
         say "No collections"
@@ -175,7 +179,7 @@ module Mddir
       label = count == 1 ? "entry" : "entries"
       say "#{collection.name} (#{count} #{label})\n\n"
 
-      entries.each_with_index { |entry, idx| print_entry(entry, idx + 1) }
+      entries.each_with_index { |entry, index| print_entry(entry, index + 1) }
     end
 
     def print_entry(entry, number)
@@ -194,6 +198,8 @@ module Mddir
       else
         say_error "Error: entry not found"
       end
+    rescue CorruptIndexError => e
+      say_error "Error: #{e.message}"
     end
 
     def remove_collection(collection)

@@ -5,6 +5,8 @@ require "time"
 require "yaml"
 
 module Mddir
+  TokenInfo = Struct.new(:count, :estimated) # rubocop:disable Lint/StructNewOverride
+
   class Entry
     attr_reader :url,
                 :title,
@@ -13,52 +15,28 @@ module Mddir
                 :filename,
                 :markdown,
                 :conversion,
-                :token_count,
-                :token_estimated,
+                :token_info,
                 :saved_at
 
-    def initialize(url:, title:, description:, markdown:, conversion:, token_count:, token_estimated:) # rubocop:disable Metrics/ParameterLists
+    def initialize(url:, title:, description:, markdown:, conversion:, token_info:) # rubocop:disable Metrics/ParameterLists
       @url = url
       @title = title.to_s.encode("UTF-8", invalid: :replace, undef: :replace)
       @description = description.to_s.encode("UTF-8", invalid: :replace, undef: :replace)
       @markdown = markdown.encode("UTF-8", invalid: :replace, undef: :replace)
       @conversion = conversion
-      @token_count = token_count
-      @token_estimated = token_estimated
+      @token_info = token_info
       @saved_at = Time.now.utc.iso8601
       @slug = generate_slug
       @filename = "#{@slug}.md"
     end
 
     def to_index_entry
-      {
-        "url" => @url,
-        "title" => @title,
-        "description" => @description,
-        "filename" => @filename,
-        "slug" => @slug,
-        "saved_at" => @saved_at,
-        "conversion" => @conversion,
-        "token_count" => @token_count,
-        "token_estimated" => @token_estimated
-      }
+      metadata.merge("filename" => @filename)
     end
 
     def to_markdown_with_frontmatter
-      frontmatter = {
-        "url" => @url,
-        "title" => @title,
-        "description" => @description,
-        "slug" => @slug,
-        "saved_at" => @saved_at,
-        "conversion" => @conversion,
-        "token_count" => @token_count,
-        "token_estimated" => @token_estimated
-      }
-
       content = Utils.strip_frontmatter(@markdown)
-      yaml_str = YAML.dump(frontmatter).delete_prefix("---\n").chomp
-      "---\n#{yaml_str}\n---\n\n#{content}"
+      "#{YAML.dump(metadata)}---\n\n#{content}"
     end
 
     def save_to(collection_path)
@@ -67,6 +45,19 @@ module Mddir
     end
 
     private
+
+    def metadata
+      {
+        "url" => @url,
+        "title" => @title,
+        "description" => @description,
+        "slug" => @slug,
+        "saved_at" => @saved_at,
+        "conversion" => @conversion,
+        "token_count" => @token_info.count,
+        "token_estimated" => @token_info.estimated
+      }
+    end
 
     def generate_slug
       title_slug = Utils.slugify(@title.empty? ? "untitled" : @title)

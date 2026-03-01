@@ -2,7 +2,9 @@
 
 <h1>Search</h1>
 
-<% if @query.empty? %>
+<% if @search_error %>
+  <p class="error">Search error: <%= h(@search_error) %></p>
+<% elsif @query.empty? %>
   <p class="empty">Enter a search query above.</p>
 <% elsif @results.empty? %>
   <p class="empty">No matches found for "<%= h(@query) %>".</p>

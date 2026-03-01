@@ -48,8 +48,8 @@ module Mddir
     def load_config
       loaded = YAML.safe_load_file(path)
       @data.merge!(loaded) if loaded.is_a?(Hash)
-    rescue Psych::SyntaxError
-      # Use defaults if config is corrupted
+    rescue Psych::SyntaxError => e
+      warn "Warning: corrupted config at #{path} (#{e.message}), using defaults"
     end
   end
 end

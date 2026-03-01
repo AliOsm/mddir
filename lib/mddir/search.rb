@@ -5,6 +5,10 @@ module Mddir
     Result = Struct.new(:collection_name, :entry, :matches)
     Match = Struct.new(:line_number, :snippet)
 
+    SNIPPET_CONTEXT_BEFORE = 40
+    SNIPPET_CONTEXT_AFTER = 80
+    SNIPPET_MAX_LENGTH = 120
+
     def initialize(config)
       @config = config
     end
@@ -60,10 +64,10 @@ module Mddir
     def extract_snippet(line, query) # rubocop:disable Metrics/AbcSize
       line = line.strip
       index = line.downcase.index(query.downcase)
-      return line[0, 120] unless index
+      return line[0, SNIPPET_MAX_LENGTH] unless index
 
-      start = [index - 40, 0].max
-      finish = [index + query.length + 80, line.length].min
+      start = [index - SNIPPET_CONTEXT_BEFORE, 0].max
+      finish = [index + query.length + SNIPPET_CONTEXT_AFTER, line.length].min
       snippet = line[start...finish]
       snippet = "...#{snippet}" if start.positive?
       snippet = "#{snippet}..." if finish < line.length

@@ -170,6 +170,8 @@ rake test
 rubocop
 ```
 
+<img src=".github/scorecard.png" width="100%">
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/AliOsm/mddir. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/AliOsm/mddir/blob/main/CODE_OF_CONDUCT.md).

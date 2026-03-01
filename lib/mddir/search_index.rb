@@ -7,6 +7,8 @@ module Mddir
     def self.open(config)
       index = new(config)
       yield index
+    rescue SQLite3::Exception => e
+      raise SearchError, e.message
     ensure
       index&.close
     end

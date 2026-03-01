@@ -36,7 +36,7 @@ class TestGlobalIndex < Minitest::Test
     index_path = Mddir::GlobalIndex.path(@config)
     FileUtils.rm_f(index_path)
 
-    data = Mddir::GlobalIndex.load(@config)
+    data = Mddir::GlobalIndex.load!(@config)
 
     assert_equal 1, data["total_entries"]
   end
@@ -48,7 +48,7 @@ class TestGlobalIndex < Minitest::Test
 
     File.write(Mddir::GlobalIndex.path(@config), "{{{{ invalid yaml !!!!")
 
-    data = Mddir::GlobalIndex.load(@config)
+    data = Mddir::GlobalIndex.load!(@config)
 
     assert_equal 1, data["total_entries"]
     assert_equal 1, data["collections"]["ruby"]["entry_count"]
@@ -80,13 +80,13 @@ class TestGlobalIndex < Minitest::Test
                                           { slug: "page-two-def456", title: "Page Two" }
                                         ])
 
-    data = Mddir::GlobalIndex.load(@config)
+    data = Mddir::GlobalIndex.load!(@config)
 
     assert_equal 2, data["collections"]["ruby"]["entry_count"]
 
     collection.remove_entry("1")
 
-    data = Mddir::GlobalIndex.load(@config)
+    data = Mddir::GlobalIndex.load!(@config)
 
     assert_equal 1, data["collections"]["ruby"]["entry_count"]
     assert_equal 1, data["total_entries"]
