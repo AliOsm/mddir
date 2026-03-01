@@ -1,10 +1,55 @@
 # Getting Started
 
-## Prerequisites
+## Installation
 
-mddir requires **Ruby >= 3.2.0**.
+### Homebrew (macOS)
 
-## Installing Ruby
+The easiest way to install mddir on macOS:
+
+```bash
+brew install AliOsm/tap/mddir
+```
+
+This taps the repository and installs the latest version. To upgrade later:
+
+```bash
+brew upgrade mddir
+```
+
+### Standalone Binary (macOS & Linux)
+
+Download the latest binary for your platform from the [GitHub releases page](https://github.com/AliOsm/mddir/releases). Available binaries:
+
+- **macOS arm64** (Apple Silicon)
+- **Linux arm64**
+- **Linux amd64**
+
+#### macOS
+
+```bash
+# Remove the quarantine flag set by macOS
+xattr -d com.apple.quarantine mddir
+
+# Make it executable
+chmod +x mddir
+
+# Move it to your PATH
+sudo mv mddir /usr/local/bin/
+```
+
+#### Linux
+
+```bash
+# Make it executable
+chmod +x mddir
+
+# Move it to your PATH
+sudo mv mddir /usr/local/bin/
+```
+
+### RubyGems
+
+If you prefer installing via RubyGems, mddir requires **Ruby >= 3.2.0**.
 
 If you don't have Ruby installed, [mise](https://mise.jdx.dev) is the easiest way to get it:
 
@@ -12,7 +57,7 @@ If you don't have Ruby installed, [mise](https://mise.jdx.dev) is the easiest wa
 mise use --global ruby@3
 ```
 
-## Install mddir
+Then install the gem:
 
 ```bash
 gem install mddir

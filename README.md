@@ -17,15 +17,32 @@ mddir fetches web pages, converts them to clean markdown, and organizes them int
 
 ## Installation
 
+### Homebrew (macOS)
+
+```bash
+brew install AliOsm/tap/mddir
+```
+
+### Standalone Binary (macOS & Linux)
+
+Download the latest binary for your platform from the [GitHub releases page](https://github.com/AliOsm/mddir/releases), then:
+
+```bash
+# macOS: remove the quarantine flag
+xattr -d com.apple.quarantine mddir
+
+chmod +x mddir
+sudo mv mddir /usr/local/bin/
+```
+
+On Linux, skip the `xattr` step.
+
+### RubyGems
+
 Requires Ruby >= 3.2.0. If you don't have Ruby installed, [mise](https://mise.jdx.dev) is the easiest way to get it:
 
 ```bash
 mise use --global ruby@3
-```
-
-Then install the gem:
-
-```bash
 gem install mddir
 ```
 
