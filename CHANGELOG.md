@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+## [0.2.1] - 2026-03-01
+
+- Fix broken image markdown from pages using `<picture>` elements (e.g. Substack)
+
 ## [0.2.0] - 2026-03-01
 
 - Lazy load dependencies to speed up Tebako binaries
