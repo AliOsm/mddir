@@ -153,3 +153,77 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: gh release upload "${{ github.event.release.tag_name }}" release/* --clobber
+
+  update-homebrew:
+    name: Update Homebrew formula
+    if: github.event_name == 'release'
+    needs: [release-upload]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release binaries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          mkdir -p binaries
+          gh release download "$TAG" --repo AliOsm/mddir --dir binaries
+
+      - name: Compute SHA256 hashes
+        id: hashes
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          echo "macos_arm64=$(sha256sum binaries/mddir-macos-arm64-${TAG} | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_arm64=$(sha256sum binaries/mddir-linux-arm64-${TAG} | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "linux_amd64=$(sha256sum binaries/mddir-linux-amd64-${TAG} | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          gh repo clone AliOsm/homebrew-tap homebrew-tap
+          cd homebrew-tap
+
+          cat > Formula/mddir.rb << FORMULA
+          class Mddir < Formula
+            desc "Local personal knowledge base — save web pages as markdown"
+            homepage "https://github.com/AliOsm/mddir"
+            version "${TAG}"
+            license "MIT"
+
+            on_macos do
+              on_arm do
+                url "https://github.com/AliOsm/mddir/releases/download/#{version}/mddir-macos-arm64-#{version}"
+                sha256 "${{ steps.hashes.outputs.macos_arm64 }}"
+              end
+            end
+
+            on_linux do
+              on_arm do
+                url "https://github.com/AliOsm/mddir/releases/download/#{version}/mddir-linux-arm64-#{version}"
+                sha256 "${{ steps.hashes.outputs.linux_arm64 }}"
+              end
+
+              on_intel do
+                url "https://github.com/AliOsm/mddir/releases/download/#{version}/mddir-linux-amd64-#{version}"
+                sha256 "${{ steps.hashes.outputs.linux_amd64 }}"
+              end
+            end
+
+            def install
+              binary_name = stable.url.split("/").last
+              bin.install binary_name => "mddir"
+            end
+
+            test do
+              assert_match "mddir #{version}", shell_output("#{bin}/mddir version")
+            end
+          end
+          FORMULA
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/mddir.rb
+          git commit -m "Update mddir to ${TAG}"
+          git push
